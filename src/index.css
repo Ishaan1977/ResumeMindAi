@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-ink text-parchment font-body antialiased;
+}
+
+::selection {
+  @apply bg-cobalt/40 text-parchment;
+}
+
+/* Visible keyboard focus, everywhere */
+:focus-visible {
+  outline: 2px solid #ffb020;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.grid-backdrop {
+  background-image: linear-gradient(rgba(138, 147, 166, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(138, 147, 166, 0.08) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.tick {
+  position: absolute;
+  width: 2px;
+  height: 10px;
+  background: #8a93a6;
+  top: 0;
+  left: 50%;
+  transform-origin: 50% 130px;
+}
