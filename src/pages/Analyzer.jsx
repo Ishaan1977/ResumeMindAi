@@ -1,15 +1,50 @@
-import { useState } from "react";
-import { CheckCircle2, AlertCircle, SendHorizontal } from "lucide-react";
+import { useState, useRef } from "react";
+import { CheckCircle2, AlertCircle, SendHorizontal, UploadCloud, FileText, X } from "lucide-react";
 import ScoreGauge from "../components/ScoreGauge.jsx";
 import Loader from "../components/Loader.jsx";
 import { analyzeResume } from "../services/aiService.js";
+import { extractTextFromPdf } from "../utils/pdfExtract.js";
 
 export default function Analyzer() {
   const [resumeText, setResumeText] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [loading, setLoading] = useState(false);
+  const [extracting, setExtracting] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
+  const [fileName, setFileName] = useState("");
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef(null);
+
+  async function handleFile(file) {
+    if (!file) return;
+    setError("");
+    setResult(null);
+    setExtracting(true);
+    try {
+      const text = await extractTextFromPdf(file);
+      setResumeText(text);
+      setFileName(file.name);
+    } catch (err) {
+      setError(err.message || "Couldn't read that PDF.");
+      setFileName("");
+    } finally {
+      setExtracting(false);
+    }
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    handleFile(file);
+  }
+
+  function clearFile() {
+    setFileName("");
+    setResumeText("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -33,16 +68,77 @@ export default function Analyzer() {
           Run diagnostic
         </span>
         <h1 className="font-display text-3xl md:text-4xl font-semibold text-parchment mt-3">
-          Paste your resume below.
+          Upload or paste your resume.
         </h1>
         <p className="text-mist mt-4 leading-relaxed">
-          Optionally paste the job description you're targeting for a tailored
-          read. Nothing you submit is stored.
+          Drop a PDF and we'll pull the text automatically, or paste it in
+          directly below. Optionally add the job description you're
+          targeting for a tailored read. Nothing you submit is stored.
         </p>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-10">
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          {/* PDF dropzone */}
+          <div>
+            <label className="font-mono text-xs uppercase tracking-widest text-mist">
+              Resume PDF (optional)
+            </label>
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragActive(true);
+              }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`mt-2 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-colors ${
+                dragActive
+                  ? "border-cobalt bg-cobalt/5"
+                  : "border-white/10 hover:border-white/20"
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={(e) => handleFile(e.target.files?.[0])}
+              />
+
+              {fileName ? (
+                <div className="flex items-center gap-2 font-mono text-sm text-parchment">
+                  <FileText className="h-4 w-4 text-amber" />
+                  {fileName}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clearFile();
+                    }}
+                    className="text-mist hover:text-[#E8552F]"
+                    aria-label="Remove file"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <UploadCloud className="h-6 w-6 text-mist" />
+                  <p className="font-mono text-xs uppercase tracking-widest text-mist">
+                    {extracting ? "Reading PDF…" : "Drop a PDF here or click to browse"}
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="font-mono text-[10px] uppercase tracking-widest text-mist">or</span>
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
+
           <div>
             <label htmlFor="resume" className="font-mono text-xs uppercase tracking-widest text-mist">
               Resume text
@@ -50,9 +146,12 @@ export default function Analyzer() {
             <textarea
               id="resume"
               value={resumeText}
-              onChange={(e) => setResumeText(e.target.value)}
+              onChange={(e) => {
+                setResumeText(e.target.value);
+                if (fileName) setFileName(""); // editing manually detaches from the uploaded file
+              }}
               placeholder="Paste your resume content here…"
-              rows={12}
+              rows={10}
               required
               className="mt-2 w-full rounded-xl border border-white/10 bg-panel p-4 text-sm text-parchment placeholder:text-mist/60 focus:border-cobalt outline-none resize-y"
             />
@@ -74,7 +173,7 @@ export default function Analyzer() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || extracting}
             className="inline-flex items-center justify-center gap-2 rounded-full bg-cobalt px-6 py-3 font-mono text-xs uppercase tracking-widest text-parchment hover:bg-cobaltDim transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Analyzing…" : "Analyze resume"} <SendHorizontal className="h-4 w-4" />
