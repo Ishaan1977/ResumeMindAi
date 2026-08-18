@@ -9,7 +9,7 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // Free, fast Llama model hosted by Groq. See https://console.groq.com/docs/models
 // for the current list if this one is ever deprecated.
-const MODEL = "llama-3.3-70b-versatile";
+const MODEL = "openai/gpt-oss-120b";
 
 const SYSTEM_PROMPT = `You are an expert technical recruiter and resume coach.
 You will be given a candidate's resume text, and optionally a target job description.
